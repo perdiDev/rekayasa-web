@@ -26,8 +26,10 @@ LIGA_TERSEDIA = {
     "bundesliga"      : ("4331", "Bundesliga"),
     "serie a"         : ("4335", "Serie A"),
     "ligue 1"         : ("4334", "Ligue 1"),
-    "liga indonesia"  : ("4480", "Liga Indonesia"),
-    "liga 1"          : ("4480", "Liga Indonesia"),
+    "liga indonesia"  : ("4643", "Liga Indonesia"),
+    "liga 1"          : ("4643", "Liga Indonesia"),
+    "eredivisie"      : ("4337", "Eredivisie"),
+    "primeira liga"   : ("4344", "Primeira Liga"),
 }
 
 # ── Warna terminal (ANSI) ─────────────────────────────────────────────────────
@@ -65,7 +67,18 @@ def get(endpoint, params=None):
         ms = round((time.time() - mulai) * 1000)
         print(redup(f"  [{ms}ms]  HTTP {resp.status_code}"))
         resp.raise_for_status()
-        return resp.json()
+
+        # Tangani response kosong (API kadang mengembalikan body kosong)
+        if not resp.text or not resp.text.strip():
+            return {}
+
+        try:
+            return resp.json()
+        except ValueError:
+            # Response bukan JSON yang valid
+            print(kuning(f"  ⚠ Response bukan JSON (panjang: {len(resp.text)} karakter)"))
+            return {}
+
     except requests.exceptions.Timeout:
         print(merah("  [TIMEOUT]"))
         print(merah("  ✗ Koneksi timeout. Coba lagi."))
@@ -177,8 +190,11 @@ def klasemen(nama_liga="premier league", musim=None):
     tabel = data.get("table")
 
     if not tabel:
-        print(kuning(f"\n  Data klasemen tidak tersedia."))
-        print(redup(f"  Coba musim lain, mis. --musim 2022-2023"))
+        print(kuning(f"\n  Data klasemen tidak tersedia untuk liga ini."))
+        print(redup(f"  Kemungkinan penyebab:"))
+        print(redup(f"    • Musim belum tersedia di TheSportsDB"))
+        print(redup(f"    • Coba musim lain: --musim 2022-2023  atau  --musim 2021-2022"))
+        print(redup(f"    • ID liga ({id_liga}) mungkin belum didukung penuh oleh API"))
         return
 
     print()
@@ -298,7 +314,8 @@ def buat_parser():
         "--liga", metavar="NAMA", default="premier league",
         help="Liga untuk klasemen (default: premier league)\n"
              "  Pilihan: 'premier league', 'la liga', 'bundesliga',\n"
-             "           'serie a', 'ligue 1', 'liga indonesia'"
+             "           'serie a', 'ligue 1', 'liga indonesia',\n"
+             "           'eredivisie', 'primeira liga'"
     )
     parser.add_argument(
         "--musim", metavar="MUSIM", default=None,
